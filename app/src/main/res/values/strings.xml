@@ -2,4 +2,6 @@
     <string name="app_name">Transfer</string>
     <string name="title_send">Send</string>
     <string name="title_receive">Receive</string>
+    <string name="send_hint">请输入要传输的文本</string>
+    <string name="receive_hint">点击开始接收</string>
 </resources>
