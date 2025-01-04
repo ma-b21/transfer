@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    id("com.chaquo.python")
 }
 
 android {
@@ -14,6 +15,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
+
     }
 
     buildTypes {
@@ -32,6 +37,18 @@ android {
     buildFeatures {
         viewBinding = true
     }
+}
+
+chaquopy {
+    defaultConfig{
+        buildPython("/home/mapu/miniconda3/bin/python")
+        pip {
+            install("numpy")
+            install("scipy")
+        }
+    }
+    productFlavors { }
+    sourceSets { }
 }
 
 dependencies {

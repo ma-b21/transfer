@@ -1,18 +1,45 @@
 package com.example.transfer.utils;
 
+import android.util.Log;
+
 public class PackageModel {
-    public static final byte START_FLAG = 0x2;
-    public static final byte END_FLAG = 0x3;
+    public static final byte START_FLAG1 = (byte) 0x5F;
+    public static final byte START_FLAG2 = (byte) 0x35;
 
     private final Header header;
     private final byte[] data;
-    private final byte tail = END_FLAG;
-    private static class Header {
-        private byte startFlag;
+    public static class Header {
+        private byte startFlag1;
+        private byte startFlag2;
         private byte length;
         private byte number;
         private PackageType type;
         private byte checkSum;
+
+        /**
+         * 构造函数，构建一个新的数据包头
+         */
+        public Header() {
+        }
+        /**
+         * 解析二进制数据包头
+         * @param binaryHeader 二进制数据包头
+         */
+        public Header(String binaryHeader){
+            byte[] headerData = StringProcessor.decode_binary_to_bytes(binaryHeader);
+            this.startFlag1 = headerData[0];
+            this.startFlag2 = headerData[1];
+            this.length = headerData[2];
+            this.type = headerData[3] == 0 ? PackageType.DATA : PackageType.END;
+            this.number = headerData[4];
+            this.checkSum = headerData[5];
+        }
+        public int getLength() {
+            return length;
+        }
+        public int getNumber() {
+            return number;
+        }
     }
 
     public enum PackageType {
@@ -33,8 +60,10 @@ public class PackageModel {
     public PackageModel(byte[] data, PackageType type, byte number) {
         this.data = data;
         this.header = new Header();
-        this.header.startFlag = START_FLAG;
+        this.header.startFlag1 = START_FLAG1;
+        this.header.startFlag2 = START_FLAG2;
         this.header.length = (byte) data.length;
+        Log.i("TRANS", "package_len" + data.length);
         this.header.number = number;
         this.header.type = type;
         this.header.checkSum = calculateCheckSum();
@@ -46,13 +75,14 @@ public class PackageModel {
      */
     public PackageModel(byte[] packageData) {
         this.header = new Header();
-        this.header.startFlag = packageData[0];
-        this.header.length = packageData[1];
-        this.header.type = packageData[2] == 0 ? PackageType.DATA : PackageType.END;
-        this.header.number = packageData[3];
-        this.header.checkSum = packageData[4];
+        this.header.startFlag1 = packageData[0];
+        this.header.startFlag2 = packageData[1];
+        this.header.length = packageData[2];
+        this.header.type = packageData[3] == 0 ? PackageType.DATA : PackageType.END;
+        this.header.number = packageData[4];
+        this.header.checkSum = packageData[5];
         this.data = new byte[packageData.length - 6];
-        System.arraycopy(packageData, 5, data, 0, data.length);
+        System.arraycopy(packageData, 6, data, 0, data.length);
     }
 
     /**
@@ -61,6 +91,7 @@ public class PackageModel {
      */
     public PackageModel(String binaryString) {
         this(StringProcessor.decode_binary_to_bytes(binaryString));
+//        Log.i("TRANS_APP", "binaryString: " + binaryString);
     }
 
     /**
@@ -69,14 +100,14 @@ public class PackageModel {
      */
     private byte calculateCheckSum() {
         byte checkSum = 0;
-        checkSum ^= header.startFlag;
+        checkSum ^= header.startFlag1;
+        checkSum ^= header.startFlag2;
         checkSum ^= header.length;
         checkSum ^= header.type.type;
         checkSum ^= header.number;
         for (byte b : data) {
             checkSum ^= b;
         }
-        checkSum ^= tail;
         return checkSum;
     }
     /**
@@ -89,13 +120,13 @@ public class PackageModel {
 
     public byte[] toByteArray() {
         byte[] packageData = new byte[data.length + 6];
-        packageData[0] = header.startFlag;
-        packageData[1] = header.length;
-        packageData[2] = header.type.type;
-        packageData[3] = header.number;
-        packageData[4] = header.checkSum;
-        System.arraycopy(data, 0, packageData, 5, data.length);
-        packageData[packageData.length - 1] = tail;
+        packageData[0] = header.startFlag1;
+        packageData[1] = header.startFlag2;
+        packageData[2] = header.length;
+        packageData[3] = header.type.type;
+        packageData[4] = header.number;
+        packageData[5] = header.checkSum;
+        System.arraycopy(data, 0, packageData, 6, data.length);
         return packageData;
     }
 

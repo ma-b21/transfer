@@ -8,12 +8,13 @@ public class PackageProcessor {
 
     public static PackageModel[] generatePackages(String input) {
         byte[] data = StringProcessor.encode_string_to_bytes(input);
-        int packageCount = (int) Math.ceil(data.length / 20.0);
+        int packageCount = (int) Math.ceil(data.length / 10.0);
         PackageModel[] packages = new PackageModel[packageCount];
         for (int i = 0; i < packageCount; i++) {
-            int packageLength = Math.min(20, data.length - i * 20);
-            byte[] packageData = new byte[packageLength];
-            System.arraycopy(data, i * 20, packageData, 0, packageLength);
+            int packageLength = Math.min(10, data.length - i * 10);
+            byte[] packageData = new byte[packageLength + 1];
+            System.arraycopy(data, i * 10, packageData, 0, packageLength);
+            packageData[packageLength] = StringProcessor.encode_string_to_bytes(" ")[0];
             if (i == packageCount - 1) {
                 packages[i] = new PackageModel(packageData, PackageModel.PackageType.END, (byte) i);
             } else {
@@ -21,13 +22,5 @@ public class PackageProcessor {
             }
         }
         return packages;
-    }
-
-    public static String extractPackages(PackageModel[] packages) {
-        StringBuilder result = new StringBuilder();
-        for (PackageModel p : packages) {
-            result.append(StringProcessor.decode_bytes_to_string(p.getData()));
-        }
-        return result.toString();
     }
 }

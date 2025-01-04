@@ -4,4 +4,5 @@
     <string name="title_receive">Receive</string>
     <string name="send_hint">请输入要传输的文本</string>
     <string name="receive_hint">点击开始接收</string>
+    <string name="binary">二进制</string>
 </resources>

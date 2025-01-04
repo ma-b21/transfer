@@ -1,0 +1,146 @@
+package com.example.transfer.utils;
+
+import android.util.Log;
+
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class QPSKModem {
+    public static final int SAMPLE_RATE = 48000;  // 采样频率
+
+    public static final double SIGNAL_FREQ = 8000;  // 信号频率
+    public static final double AMPLITUDE = 1.0;  // 振幅
+    public static final double SYMBOL_DURATION = 0.025;  // 每个符号的持续时间
+    public static final int SAMPLES_PER_SYMBOL = (int)(SAMPLE_RATE * SYMBOL_DURATION);
+
+    // 禁止实例化
+    private QPSKModem() {
+        throw new UnsupportedOperationException("此类不能被实例化");
+    }
+
+    // QPSK 调制方法
+    public static short[] modulate(String binaryString) {
+        if (binaryString.length() % 2 != 0) {
+            throw new IllegalArgumentException("输入数据长度必须为偶数");
+        }
+
+        int numSymbols = binaryString.length() / 2;
+        int totalSamples = numSymbols * SAMPLES_PER_SYMBOL;
+
+        short[] modulatedSignal = new short[totalSamples];
+        double[] t = new double[SAMPLES_PER_SYMBOL];
+
+        for (int i = 0; i < SAMPLES_PER_SYMBOL; i++) {
+            t[i] = i / (double) SAMPLE_RATE;
+        }
+
+        // 映射星座点
+        double[][] symbolMap = {
+                {-Math.sqrt(2) / 2, -Math.sqrt(2) / 2},  // 00
+                {-Math.sqrt(2) / 2, Math.sqrt(2) / 2},   // 01
+                {Math.sqrt(2) / 2, -Math.sqrt(2) / 2},   // 10
+                {Math.sqrt(2) / 2, Math.sqrt(2) / 2}     // 11
+        };
+
+        for (int symbolIdx = 0; symbolIdx < numSymbols; symbolIdx++) {
+            String bits = binaryString.substring(symbolIdx * 2, symbolIdx * 2 + 2);
+            double[] iq = symbolMap[getSymbolIndex(bits)];
+
+            for (int i = 0; i < SAMPLES_PER_SYMBOL; i++) {
+                double phi = 2 * Math.PI * SIGNAL_FREQ * t[i];
+                double modulatedSample = AMPLITUDE * (iq[0] * Math.cos(phi) + iq[1] * Math.sin(phi));
+                modulatedSignal[symbolIdx * SAMPLES_PER_SYMBOL + i] = (short) (modulatedSample * Short.MAX_VALUE);
+            }
+        }
+
+        return modulatedSignal;
+    }
+
+    // 将二进制字符串转换为星座索引
+    private static int getSymbolIndex(String bits) {
+        switch (bits) {
+            case "00": return 0;
+            case "01": return 1;
+            case "10": return 2;
+            case "11": return 3;
+            default: throw new IllegalArgumentException("无效的二进制符号");
+        }
+    }
+
+
+    /**
+     * 解调方法
+     * @param receivedSignal 接收到的信号
+     * @return 解调后的二进制字符串
+     */
+    public static String demodulate(short[] receivedSignal) {
+        int numSymbols = receivedSignal.length / SAMPLES_PER_SYMBOL;
+
+
+        StringBuilder demodulatedBits = new StringBuilder();
+        double[] t = new double[SAMPLES_PER_SYMBOL];
+        for (int i = 0; i < SAMPLES_PER_SYMBOL; i++) {
+            t[i] = i / (double) SAMPLE_RATE;
+        }
+
+        for (int symbolIdx = 0; symbolIdx < numSymbols; symbolIdx++) {
+            double iSum = 0;
+            double qSum = 0;
+
+            for (int i = 0; i < SAMPLES_PER_SYMBOL; i++) {
+                double sample = receivedSignal[symbolIdx * SAMPLES_PER_SYMBOL + i] / (double) Short.MAX_VALUE;
+                iSum += sample * Math.cos(2 * Math.PI * SIGNAL_FREQ * t[i]);
+                qSum += sample * Math.sin(2 * Math.PI * SIGNAL_FREQ * t[i]);
+            }
+
+            demodulatedBits.append(getBitsFromIQ(iSum, qSum));
+        }
+
+        return demodulatedBits.toString();
+    }
+
+    /**
+     * 解调bitLength个比特
+     * @param receivedSignal 接收到的信号
+     * @param start 起始位置
+     * @param bitLength 比特长度
+     * @return 解调后的二进制字符串
+     */
+    public static String demodulate_bits(short[] receivedSignal, int start, int bitLength) {
+        if(start + SAMPLES_PER_SYMBOL * (bitLength / 2) > receivedSignal.length) {
+            throw new IllegalArgumentException("接收到的信号长度不足");
+        }
+
+        StringBuilder demodulatedBits = new StringBuilder();
+        double[] t = new double[SAMPLES_PER_SYMBOL];
+        for (int i = 0; i < SAMPLES_PER_SYMBOL; i++) {
+            t[i] = i / (double) SAMPLE_RATE;
+        }
+
+        for (int i = 0; i < bitLength / 2; i++) {
+            double iSum = 0;
+            double qSum = 0;
+
+            for (int j = 0; j < SAMPLES_PER_SYMBOL; j++) {
+                double sample = receivedSignal[start + i * SAMPLES_PER_SYMBOL + j] / (double) Short.MAX_VALUE;
+                iSum += sample * Math.cos(2 * Math.PI * SIGNAL_FREQ * t[j]);
+                qSum += sample * Math.sin(2 * Math.PI * SIGNAL_FREQ * t[j]);
+            }
+            demodulatedBits.append(getBitsFromIQ(iSum, qSum));
+        }
+        return demodulatedBits.toString();
+    }
+
+    // 根据 I 和 Q 值判断符号
+    private static String getBitsFromIQ(double i, double q) {
+        if (i < 0 && q < 0) return "00";
+        if (i < 0 && q >= 0) return "01";
+        if (i >= 0 && q < 0) return "10";
+        return "11";
+    }
+
+    public static int getSignalLength(String binarySignal) {
+        return binarySignal.length() * SAMPLES_PER_SYMBOL / 2;
+    }
+}

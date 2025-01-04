@@ -1,5 +1,6 @@
 package com.example.transfer.ui.send;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
@@ -9,6 +10,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.TextView;
 
 import com.example.transfer.R;
 import com.example.transfer.sender.TransSender;
@@ -32,10 +34,14 @@ public class SendFragment extends Fragment {
         View root =  inflater.inflate(R.layout.fragment_send, container, false);
         ImageButton btn = root.findViewById(R.id.send_button);
         EditText txt = root.findViewById(R.id.send_text);
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) TextView binary = root.findViewById(R.id.send_text_binary);
         btn.setOnClickListener(
                 v -> {
                     String message = txt.getText().toString();
-                    sender.send(message);
+                    if(message.isEmpty()){
+                        return;
+                    }
+                    sender.send(message, binary);
                 }
         );
         return root;
